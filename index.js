@@ -14,24 +14,20 @@ let backups = {
 
 let selectedItems = {};
 
-// Inicialización
 document.addEventListener('DOMContentLoaded', () => {
     showLoading();
     loadBackups();
     setupEventListeners();
 });
 
-// Mostrar loading
 function showLoading() {
     document.getElementById('loading-overlay').classList.remove('hidden');
 }
 
-// Ocultar loading
 function hideLoading() {
     document.getElementById('loading-overlay').classList.add('hidden');
 }
 
-// Mostrar toast
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toast-message');
@@ -46,7 +42,6 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Cargar datos guardados
 async function loadBackups() {
     try {
         const result = await window.storage.get('backup-data');
@@ -61,7 +56,6 @@ async function loadBackups() {
     }
 }
 
-// Guardar datos
 async function saveBackups() {
     try {
         showLoading();
@@ -76,7 +70,6 @@ async function saveBackups() {
     }
 }
 
-// Obtener fecha y hora actual formateada
 function getCurrentTimestamp() {
     const now = new Date();
     return now.toLocaleString('es-CO', {
@@ -88,7 +81,6 @@ function getCurrentTimestamp() {
     });
 }
 
-// Obtener última copia
 function getLastBackup(item, category) {
     const backupList = backups[category][item];
     if (backupList && backupList.length > 0) {
@@ -97,7 +89,6 @@ function getLastBackup(item, category) {
     return 'Nunca';
 }
 
-// Calcular días desde última copia
 function getDaysSince(item, category) {
     const backupList = backups[category][item];
     if (backupList && backupList.length > 0) {
@@ -110,7 +101,6 @@ function getDaysSince(item, category) {
     return null;
 }
 
-// Crear elemento de backup
 function createBackupItem(item, category) {
     const daysSince = getDaysSince(item, category);
     const isOverdue = daysSince !== null && daysSince > 7;
@@ -172,7 +162,6 @@ function createBackupItem(item, category) {
     return div;
 }
 
-// Renderizar listas
 function renderLists() {
     const clasificadosList = document.getElementById('clasificados-list');
     const suscripcionesList = document.getElementById('suscripciones-list');
@@ -180,7 +169,6 @@ function renderLists() {
     clasificadosList.innerHTML = '';
     suscripcionesList.innerHTML = '';
     
-    // Añadir delay escalonado para animaciones
     Object.keys(backups.clasificados).forEach((item, index) => {
         const element = createBackupItem(item, 'clasificados');
         element.style.animationDelay = `${index * 0.1}s`;
@@ -196,13 +184,11 @@ function renderLists() {
     setupCheckboxListeners();
 }
 
-// Mostrar/ocultar historial
 function toggleHistory(item) {
     const historyList = document.getElementById(`history-${item}`);
     historyList.classList.toggle('hidden');
 }
 
-// Configurar listeners de checkboxes
 function setupCheckboxListeners() {
     document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', (e) => {
@@ -213,7 +199,6 @@ function setupCheckboxListeners() {
     });
 }
 
-// Actualizar botón de guardar
 function updateSaveButton() {
     const saveBtn = document.getElementById('guardar');
     const hasSelection = Object.values(selectedItems).some(v => v);
@@ -227,13 +212,11 @@ function updateSaveButton() {
     }
 }
 
-// Configurar event listeners
 function setupEventListeners() {
     document.getElementById('guardar').addEventListener('click', handleSave);
     document.getElementById('exportar').addEventListener('click', exportToExcel);
 }
 
-// Manejar guardado
 async function handleSave() {
     const timestamp = getCurrentTimestamp();
     
@@ -256,7 +239,6 @@ async function handleSave() {
     if (success) {
         selectedItems = {};
         
-        // Desmarcar todos los checkboxes con animación
         document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
             checkbox.checked = false;
         });
@@ -267,12 +249,10 @@ async function handleSave() {
     }
 }
 
-// Exportar a Excel
 function exportToExcel() {
     showLoading();
     
     try {
-        // Obtener el rango de fechas (últimos 30 días)
         const today = new Date();
         const dates = [];
         for (let i = 29; i >= 0; i--) {
@@ -281,17 +261,14 @@ function exportToExcel() {
             dates.push(date);
         }
 
-        // Preparar datos para Excel
         const excelData = [];
         
-        // Encabezado
         const header = ['Categoría', 'Elemento'];
         dates.forEach(date => {
             header.push(date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }));
         });
         excelData.push(header);
 
-        // Procesar cada categoría
         Object.keys(backups).forEach(category => {
             Object.keys(backups[category]).forEach(item => {
                 const row = [
@@ -299,7 +276,6 @@ function exportToExcel() {
                     item
                 ];
 
-                // Para cada fecha, verificar si hay copia
                 dates.forEach(date => {
                     const dateStr = date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
                     const hasBackup = backups[category][item].some(backup => {
@@ -313,7 +289,6 @@ function exportToExcel() {
             });
         });
 
-        // Agregar resumen al final
         excelData.push([]);
         excelData.push(['RESUMEN']);
         excelData.push([]);
@@ -334,22 +309,18 @@ function exportToExcel() {
             });
         });
 
-        // Crear libro de Excel
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(excelData);
 
-        // Ajustar ancho de columnas
         const colWidths = [
-            { wch: 15 }, // Categoría
-            { wch: 12 }  // Elemento
+            { wch: 15 }, 
+            { wch: 12 }  
         ];
         dates.forEach(() => colWidths.push({ wch: 12 }));
         ws['!cols'] = colWidths;
 
-        // Agregar la hoja al libro
         XLSX.utils.book_append_sheet(wb, ws, 'Copias de Seguridad');
 
-        // Generar y descargar el archivo
         const fileName = `copias_seguridad_${today.toISOString().split('T')[0]}.xlsx`;
         XLSX.writeFile(wb, fileName);
         
