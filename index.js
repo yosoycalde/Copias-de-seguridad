@@ -16,10 +16,35 @@ let selectedItems = {};
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
+    showLoading();
     loadBackups();
-    renderLists();
     setupEventListeners();
 });
+
+// Mostrar loading
+function showLoading() {
+    document.getElementById('loading-overlay').classList.remove('hidden');
+}
+
+// Ocultar loading
+function hideLoading() {
+    document.getElementById('loading-overlay').classList.add('hidden');
+}
+
+// Mostrar toast
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    
+    toast.className = `toast ${type}`;
+    toastMessage.textContent = message;
+    
+    toast.classList.remove('hidden');
+    
+    setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 3000);
+}
 
 // Cargar datos guardados
 async function loadBackups() {
@@ -27,19 +52,27 @@ async function loadBackups() {
         const result = await window.storage.get('backup-data');
         if (result) {
             backups = JSON.parse(result.value);
-            renderLists();
         }
     } catch (error) {
-        console.log('No hay datos previos');
+        console.log('No hay datos previos, iniciando con datos vacíos');
+    } finally {
+        hideLoading();
+        renderLists();
     }
 }
 
 // Guardar datos
 async function saveBackups() {
     try {
+        showLoading();
         await window.storage.set('backup-data', JSON.stringify(backups));
+        hideLoading();
+        return true;
     } catch (error) {
         console.error('Error al guardar:', error);
+        hideLoading();
+        showToast('Error al guardar los datos', 'error');
+        return false;
     }
 }
 
@@ -147,12 +180,17 @@ function renderLists() {
     clasificadosList.innerHTML = '';
     suscripcionesList.innerHTML = '';
     
-    Object.keys(backups.clasificados).forEach(item => {
-        clasificadosList.appendChild(createBackupItem(item, 'clasificados'));
+    // Añadir delay escalonado para animaciones
+    Object.keys(backups.clasificados).forEach((item, index) => {
+        const element = createBackupItem(item, 'clasificados');
+        element.style.animationDelay = `${index * 0.1}s`;
+        clasificadosList.appendChild(element);
     });
     
-    Object.keys(backups.suscripciones).forEach(item => {
-        suscripcionesList.appendChild(createBackupItem(item, 'suscripciones'));
+    Object.keys(backups.suscripciones).forEach((item, index) => {
+        const element = createBackupItem(item, 'suscripciones');
+        element.style.animationDelay = `${index * 0.1}s`;
+        suscripcionesList.appendChild(element);
     });
     
     setupCheckboxListeners();
@@ -196,7 +234,7 @@ function setupEventListeners() {
 }
 
 // Manejar guardado
-function handleSave() {
+async function handleSave() {
     const timestamp = getCurrentTimestamp();
     
     Object.keys(selectedItems).forEach(item => {
@@ -213,93 +251,113 @@ function handleSave() {
         }
     });
     
-    saveBackups();
-    selectedItems = {};
-    renderLists();
-    updateSaveButton();
-    alert('Copias de seguridad guardadas exitosamente');
+    const success = await saveBackups();
+    
+    if (success) {
+        selectedItems = {};
+        
+        // Desmarcar todos los checkboxes con animación
+        document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        renderLists();
+        updateSaveButton();
+        showToast('¡Copias de seguridad guardadas exitosamente!', 'success');
+    }
 }
 
 // Exportar a Excel
 function exportToExcel() {
-    // Obtener el rango de fechas (últimos 30 días)
-    const today = new Date();
-    const dates = [];
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        dates.push(date);
-    }
-
-    // Preparar datos para Excel
-    const excelData = [];
+    showLoading();
     
-    // Encabezado
-    const header = ['Categoría', 'Elemento'];
-    dates.forEach(date => {
-        header.push(date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }));
-    });
-    excelData.push(header);
+    try {
+        // Obtener el rango de fechas (últimos 30 días)
+        const today = new Date();
+        const dates = [];
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            dates.push(date);
+        }
 
-    // Procesar cada categoría
-    Object.keys(backups).forEach(category => {
-        Object.keys(backups[category]).forEach(item => {
-            const row = [
-                category.charAt(0).toUpperCase() + category.slice(1),
-                item
-            ];
+        // Preparar datos para Excel
+        const excelData = [];
+        
+        // Encabezado
+        const header = ['Categoría', 'Elemento'];
+        dates.forEach(date => {
+            header.push(date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+        });
+        excelData.push(header);
 
-            // Para cada fecha, verificar si hay copia
-            dates.forEach(date => {
-                const dateStr = date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const hasBackup = backups[category][item].some(backup => {
-                    const backupDate = backup.split(',')[0].trim();
-                    return backupDate === dateStr;
+        // Procesar cada categoría
+        Object.keys(backups).forEach(category => {
+            Object.keys(backups[category]).forEach(item => {
+                const row = [
+                    category.charAt(0).toUpperCase() + category.slice(1),
+                    item
+                ];
+
+                // Para cada fecha, verificar si hay copia
+                dates.forEach(date => {
+                    const dateStr = date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const hasBackup = backups[category][item].some(backup => {
+                        const backupDate = backup.split(',')[0].trim();
+                        return backupDate === dateStr;
+                    });
+                    row.push(hasBackup ? 'SÍ' : 'NO');
                 });
-                row.push(hasBackup ? 'SÍ' : 'NO');
+
+                excelData.push(row);
             });
-
-            excelData.push(row);
         });
-    });
 
-    // Agregar resumen al final
-    excelData.push([]);
-    excelData.push(['RESUMEN']);
-    excelData.push([]);
-    
-    Object.keys(backups).forEach(category => {
-        Object.keys(backups[category]).forEach(item => {
-            const lastBackup = getLastBackup(item, category);
-            const daysSince = getDaysSince(item, category);
-            const status = daysSince !== null && daysSince > 7 ? '⚠️ ATRASADO' : '✓ AL DÍA';
-            
-            excelData.push([
-                category.charAt(0).toUpperCase() + category.slice(1),
-                item,
-                lastBackup,
-                daysSince !== null ? `${daysSince} días` : 'Sin copias',
-                status
-            ]);
+        // Agregar resumen al final
+        excelData.push([]);
+        excelData.push(['RESUMEN']);
+        excelData.push([]);
+        
+        Object.keys(backups).forEach(category => {
+            Object.keys(backups[category]).forEach(item => {
+                const lastBackup = getLastBackup(item, category);
+                const daysSince = getDaysSince(item, category);
+                const status = daysSince !== null && daysSince > 7 ? '⚠️ ATRASADO' : '✓ AL DÍA';
+                
+                excelData.push([
+                    category.charAt(0).toUpperCase() + category.slice(1),
+                    item,
+                    lastBackup,
+                    daysSince !== null ? `${daysSince} días` : 'Sin copias',
+                    status
+                ]);
+            });
         });
-    });
 
-    // Crear libro de Excel
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(excelData);
+        // Crear libro de Excel
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(excelData);
 
-    // Ajustar ancho de columnas
-    const colWidths = [
-        { wch: 15 }, // Categoría
-        { wch: 12 }  // Elemento
-    ];
-    dates.forEach(() => colWidths.push({ wch: 12 }));
-    ws['!cols'] = colWidths;
+        // Ajustar ancho de columnas
+        const colWidths = [
+            { wch: 15 }, // Categoría
+            { wch: 12 }  // Elemento
+        ];
+        dates.forEach(() => colWidths.push({ wch: 12 }));
+        ws['!cols'] = colWidths;
 
-    // Agregar la hoja al libro
-    XLSX.utils.book_append_sheet(wb, ws, 'Copias de Seguridad');
+        // Agregar la hoja al libro
+        XLSX.utils.book_append_sheet(wb, ws, 'Copias de Seguridad');
 
-    // Generar y descargar el archivo
-    const fileName = `copias_seguridad_${today.toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+        // Generar y descargar el archivo
+        const fileName = `copias_seguridad_${today.toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+        hideLoading();
+        showToast('Archivo Excel exportado exitosamente', 'success');
+    } catch (error) {
+        console.error('Error al exportar:', error);
+        hideLoading();
+        showToast('Error al exportar el archivo', 'error');
+    }
 }
