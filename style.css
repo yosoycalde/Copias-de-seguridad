@@ -1,0 +1,253 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #EFF6FF 0%, #E0E7FF 100%);
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.header-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 32px;
+    margin-bottom: 24px;
+}
+
+.header-card h1 {
+    font-size: 30px;
+    font-weight: bold;
+    color: #111827;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.icon-calendar {
+    width: 32px;
+    height: 32px;
+    color: #2563EB;
+}
+
+.header-card p {
+    color: #6B7280;
+    font-size: 16px;
+}
+
+.main-card {
+    background: #F9FAFB;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 32px;
+}
+
+.section {
+    margin-bottom: 32px;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #374151;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.icon-archive {
+    width: 20px;
+    height: 20px;
+}
+
+.backup-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.backup-item {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 2px solid #E5E7EB;
+}
+
+.backup-item.overdue {
+    border-color: #FCA5A5;
+}
+
+.backup-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.backup-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.backup-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #2563EB;
+}
+
+.backup-item label {
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.backup-item-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 14px;
+}
+
+.last-backup {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #6B7280;
+}
+
+.icon-clock {
+    width: 16px;
+    height: 16px;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.badge.success {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.badge.warning {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.history-section {
+    margin-top: 12px;
+}
+
+.history-toggle {
+    background: none;
+    border: none;
+    color: #2563EB;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.history-toggle:hover {
+    color: #1E40AF;
+}
+
+.history-list {
+    list-style: none;
+    margin-top: 8px;
+    margin-left: 24px;
+}
+
+.history-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #6B7280;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.icon-check {
+    width: 12px;
+    height: 12px;
+    color: #10B981;
+}
+
+.btn-save {
+    width: 100%;
+    padding: 16px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-save:not(:disabled) {
+    background: #2563EB;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-save:not(:disabled):hover {
+    background: #1D4ED8;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-save:disabled {
+    background: #9CA3AF;
+    color: white;
+    cursor: not-allowed;
+}
+
+.btn-export {
+    width: 100%;
+    padding: 16px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #10B981;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-export:hover {
+    background: #059669;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.icon-download {
+    width: 20px;
+    height: 20px;
+}
+
+.hidden {
+    display: none;
+}
