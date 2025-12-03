@@ -44,7 +44,7 @@ function showToast(message, type = 'success') {
 
 async function loadBackups() {
     try {
-        const result = await window.storage.get('backup-data');
+        const result = await window.Storage.get('backup-data');
         if (result) {
             backups = JSON.parse(result.value);
         }
@@ -59,7 +59,7 @@ async function loadBackups() {
 async function saveBackups() {
     try {
         showLoading();
-        await window.storage.set('backup-data', JSON.stringify(backups));
+        await window.Storage.set('backup-data', JSON.stringify(backups));
         hideLoading();
         return true;
     } catch (error) {
