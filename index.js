@@ -205,7 +205,7 @@ function updateSaveButton() {
     
     if (hasSelection) {
         saveBtn.disabled = false;
-        saveBtn.textContent = '✓ Guardar Copias Seleccionadas';
+        saveBtn.textContent = 'Guardar Copias Seleccionadas';
     } else {
         saveBtn.disabled = true;
         saveBtn.textContent = 'Selecciona elementos para guardar';
