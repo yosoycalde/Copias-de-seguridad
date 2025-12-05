@@ -21,16 +21,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function showLoading() {
-    document.getElementById('loading-overlay').classList.remove('hidden');
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.classList.remove('hidden');
 }
 
 function hideLoading() {
-    document.getElementById('loading-overlay').classList.add('hidden');
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.classList.add('hidden');
 }
 
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toast-message');
+    
+    if (!toast || !toastMessage) return;
     
     toast.className = `toast ${type}`;
     toastMessage.textContent = message;
@@ -44,28 +48,51 @@ function showToast(message, type = 'success') {
 
 async function loadBackups() {
     try {
-        const result = await window.Storage.get('backup-data');
-        if (result) {
-            backups = JSON.parse(result.value);
+        const response = await fetch('get_backups.php');
+        const data = await response.json();
+        
+        if (data.success) {
+            backups = data.data;
+            console.log('Datos cargados desde la base de datos');
+        } else {
+            throw new Error(data.message);
         }
     } catch (error) {
-        console.log('No hay datos previos, iniciando con datos vacíos');
+        console.error('Error al cargar copias:', error);
+        showToast('Error al cargar los datos: ' + error.message, 'error');
     } finally {
         hideLoading();
         renderLists();
     }
 }
 
-async function saveBackups() {
+async function saveBackups(itemsToSave) {
     try {
         showLoading();
-        await window.Storage.set('backup-data', JSON.stringify(backups));
-        hideLoading();
-        return true;
+        
+        const response = await fetch('save_backups.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                items: itemsToSave
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('Datos guardados en la base de datos');
+            hideLoading();
+            return true;
+        } else {
+            throw new Error(data.message);
+        }
     } catch (error) {
         console.error('Error al guardar:', error);
         hideLoading();
-        showToast('Error al guardar los datos', 'error');
+        showToast('Error al guardar: ' + error.message, 'error');
         return false;
     }
 }
@@ -142,7 +169,7 @@ function createBackupItem(item, category) {
     div.innerHTML = `
         <div class="backup-item-header">
             <div class="backup-item-left">
-                <input type="checkbox" id="${item}" data-item="${item}">
+                <input type="checkbox" id="${item}" data-item="${item}" data-category="${category}">
                 <label for="${item}">${item}</label>
             </div>
             <div class="backup-item-right">
@@ -166,6 +193,8 @@ function renderLists() {
     const clasificadosList = document.getElementById('clasificados-list');
     const suscripcionesList = document.getElementById('suscripciones-list');
     
+    if (!clasificadosList || !suscripcionesList) return;
+    
     clasificadosList.innerHTML = '';
     suscripcionesList.innerHTML = '';
     
@@ -186,14 +215,20 @@ function renderLists() {
 
 function toggleHistory(item) {
     const historyList = document.getElementById(`history-${item}`);
-    historyList.classList.toggle('hidden');
+    if (historyList) {
+        historyList.classList.toggle('hidden');
+    }
 }
 
 function setupCheckboxListeners() {
     document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', (e) => {
             const item = e.target.dataset.item;
-            selectedItems[item] = e.target.checked;
+            const category = e.target.dataset.category;
+            selectedItems[item] = {
+                selected: e.target.checked,
+                category: category
+            };
             updateSaveButton();
         });
     });
@@ -201,7 +236,9 @@ function setupCheckboxListeners() {
 
 function updateSaveButton() {
     const saveBtn = document.getElementById('guardar');
-    const hasSelection = Object.values(selectedItems).some(v => v);
+    if (!saveBtn) return;
+    
+    const hasSelection = Object.values(selectedItems).some(v => v.selected);
     
     if (hasSelection) {
         saveBtn.disabled = false;
@@ -213,28 +250,37 @@ function updateSaveButton() {
 }
 
 function setupEventListeners() {
-    document.getElementById('guardar').addEventListener('click', handleSave);
-    document.getElementById('exportar').addEventListener('click', exportToExcel);
+    const saveBtn = document.getElementById('guardar');
+    const exportBtn = document.getElementById('exportar');
+    
+    if (saveBtn) saveBtn.addEventListener('click', handleSave);
+    if (exportBtn) exportBtn.addEventListener('click', exportToExcel);
 }
 
 async function handleSave() {
     const timestamp = getCurrentTimestamp();
+    const itemsToSave = [];
     
+    // Preparar los datos para guardar en la BD
     Object.keys(selectedItems).forEach(item => {
-        if (selectedItems[item]) {
-            const category = Object.keys(backups).find(cat => 
-                backups[cat].hasOwnProperty(item)
-            );
-            if (category) {
-                backups[category][item] = [
-                    timestamp,
-                    ...backups[category][item].slice(0, 9)
-                ];
-            }
+        if (selectedItems[item].selected) {
+            const category = selectedItems[item].category;
+            itemsToSave.push({
+                categoria: category,
+                item: item,
+                fecha: timestamp
+            });
+            
+            // Actualizar el objeto local para reflejar los cambios inmediatamente
+            backups[category][item] = [
+                timestamp,
+                ...backups[category][item].slice(0, 9)
+            ];
         }
     });
     
-    const success = await saveBackups();
+    // Guardar en la base de datos
+    const success = await saveBackups(itemsToSave);
     
     if (success) {
         selectedItems = {};
@@ -243,7 +289,8 @@ async function handleSave() {
             checkbox.checked = false;
         });
         
-        renderLists();
+        // Recargar desde la base de datos para asegurar consistencia
+        await loadBackups();
         updateSaveButton();
         showToast('¡Copias de seguridad guardadas exitosamente!', 'success');
     }
@@ -253,6 +300,10 @@ function exportToExcel() {
     showLoading();
     
     try {
+        if (typeof XLSX === 'undefined') {
+            throw new Error('Librería XLSX no está cargada');
+        }
+
         const today = new Date();
         const dates = [];
         for (let i = 29; i >= 0; i--) {
@@ -329,6 +380,6 @@ function exportToExcel() {
     } catch (error) {
         console.error('Error al exportar:', error);
         hideLoading();
-        showToast('Error al exportar el archivo', 'error');
+        showToast('Error al exportar el archivo: ' + error.message, 'error');
     }
 }
